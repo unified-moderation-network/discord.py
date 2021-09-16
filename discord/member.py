@@ -470,20 +470,19 @@ class Member(discord.abc.Messageable, _UserTag):
 
     @property
     def roles(self) -> List[Role]:
-        """List[:class:`Role`]: A :class:`list` of :class:`Role` that the member belongs to. Note
-        that the first element of this list is always the default '@everyone'
-        role.
-
-        These roles are sorted by their position in the role hierarchy.
+        """List[:class:`Role`]: A :class:`list` of :class:`Role` that the member belongs to.
+        
+        Note that while the first element of this list is always the default '@everyone'
+        role, the remaining order is not guaranteed.
+        Sorting this list will result in it being ordered by role order.
         """
         result = []
         g = self.guild
+        result.append(g.default_role)
         for role_id in self._roles:
             role = g.get_role(role_id)
             if role:
                 result.append(role)
-        result.append(g.default_role)
-        result.sort()
         return result
 
     @property
