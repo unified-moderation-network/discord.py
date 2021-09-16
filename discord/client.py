@@ -1,7 +1,7 @@
 """
 The MIT License (MIT)
 
-Copyright (c) 2015-present Rapptz
+Copyright (c) 2015-2021 Rapptz, 2021-present Michael Hall
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -33,6 +33,7 @@ from typing import Any, Callable, Coroutine, Dict, Generator, List, Optional, Se
 
 import aiohttp
 
+from .ast_utils import nodebuglog
 from .user import User, ClientUser
 from .invite import Invite
 from .template import Template
@@ -109,6 +110,7 @@ def _cleanup_loop(loop: asyncio.AbstractEventLoop) -> None:
         _log.info('Closing the event loop.')
         loop.close()
 
+@nodebuglog("_log")
 class Client:
     r"""Represents a client connection that connects to Discord.
     This class is used to interact with the Discord WebSocket and API.

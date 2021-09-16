@@ -1,7 +1,7 @@
 """
 The MIT License (MIT)
 
-Copyright (c) 2015-present Rapptz
+Copyright (c) 2015-2021 Rapptz, 2021-present Michael Hall
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -37,6 +37,7 @@ import aiohttp
 
 from . import utils
 from .activity import BaseActivity
+from .ast_utils import nodebuglog
 from .enums import SpeakingState
 from .errors import ConnectionClosed, InvalidArgument
 
@@ -105,6 +106,7 @@ class GatewayRatelimiter:
                 await asyncio.sleep(delta)
 
 
+@nodebuglog("_log")
 class KeepAliveHandler(threading.Thread):
     def __init__(self, *args, **kwargs):
         ws = kwargs.pop('ws', None)
@@ -212,6 +214,7 @@ class DiscordClientWebSocketResponse(aiohttp.ClientWebSocketResponse):
     async def close(self, *, code: int = 4000, message: bytes = b'') -> bool:
         return await super().close(code=code, message=message)
 
+@nodebuglog("_log")
 class DiscordWebSocket:
     """Implements a WebSocket for Discord's gateway v6.
 

@@ -1,7 +1,7 @@
 """
 The MIT License (MIT)
 
-Copyright (c) 2015-present Rapptz
+Copyright (c) 2015-2021 Rapptz, 2021-present Michael Hall
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -44,6 +44,7 @@ from ..asset import Asset
 from ..http import Route
 from ..mixins import Hashable
 from ..channel import PartialMessageable
+from ..ast_utils import nodebuglog
 
 __all__ = (
     'Webhook',
@@ -93,6 +94,7 @@ class AsyncDeferredLock:
         self.lock.release()
 
 
+@nodebuglog("_log")
 class AsyncWebhookAdapter:
     def __init__(self):
         self._locks: Dict[Any, asyncio.Lock] = {}

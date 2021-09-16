@@ -1,7 +1,7 @@
 """
 The MIT License (MIT)
 
-Copyright (c) 2015-present Rapptz
+Copyright (c) 2015-2021 Rapptz, 2021-present Michael Hall
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -48,6 +48,7 @@ import weakref
 
 import aiohttp
 
+from .ast_utils import nodebuglog
 from .errors import HTTPException, Forbidden, NotFound, LoginFailure, DiscordServerError, GatewayNotFound, InvalidArgument
 from .gateway import DiscordClientWebSocketResponse
 from . import __version__, utils
@@ -156,6 +157,7 @@ class MaybeUnlock:
 aiohttp.hdrs.WEBSOCKET = 'websocket'  # type: ignore
 
 
+@nodebuglog("_log")
 class HTTPClient:
     """Represents an HTTP client sending HTTP requests to the Discord API."""
 

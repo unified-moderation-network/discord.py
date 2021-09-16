@@ -1,7 +1,7 @@
 """
 The MIT License (MIT)
 
-Copyright (c) 2015-present Rapptz
+Copyright (c) 2015-2021 Rapptz, 2021-present Michael Hall
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -35,6 +35,7 @@ import inspect
 
 import os
 
+from .ast_utils import nodebuglog
 from .guild import Guild
 from .activity import BaseActivity
 from .user import User, ClientUser
@@ -139,6 +140,7 @@ async def logging_coroutine(coroutine: Coroutine[Any, Any, T], *, info: str) -> 
         _log.exception('Exception occurred during %s', info)
 
 
+@nodebuglog("_log")
 class ConnectionState:
     if TYPE_CHECKING:
         _get_websocket: Callable[..., DiscordWebSocket]
@@ -1397,6 +1399,7 @@ class ConnectionState:
         return Message(state=self, channel=channel, data=data)
 
 
+@nodebuglog("_log")
 class AutoShardedConnectionState(ConnectionState):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)

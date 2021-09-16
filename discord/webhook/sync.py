@@ -1,7 +1,7 @@
 """
 The MIT License (MIT)
 
-Copyright (c) 2015-present Rapptz
+Copyright (c) 2015-2021 Rapptz, 2021-present Michael Hall
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -44,6 +44,7 @@ from ..errors import InvalidArgument, HTTPException, Forbidden, NotFound, Discor
 from ..message import Message
 from ..http import Route
 from ..channel import PartialMessageable
+from ..ast_utils import nodebuglog
 
 from .async_ import BaseWebhook, handle_message_parameters, _WebhookState
 
@@ -89,6 +90,7 @@ class DeferredLock:
         self.lock.release()
 
 
+@nodebuglog("_log")
 class WebhookAdapter:
     def __init__(self):
         self._locks: Dict[Any, threading.Lock] = {}
