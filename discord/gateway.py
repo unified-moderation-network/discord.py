@@ -510,6 +510,7 @@ class DiscordWebSocket:
         try:
             func = self._discord_parsers[event]
         except KeyError:
+            pass  # I may modify the AST rewriting deco to not need this later, but it's an odd case to *only* log.
             _log.debug('Unknown event %s.', event)
         else:
             func(data)

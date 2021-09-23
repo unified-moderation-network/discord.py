@@ -768,17 +768,11 @@ class ConnectionState:
             return
 
         guild_id = utils._get_as_snowflake(data, 'guild_id')
-        guild = self._get_guild(guild_id)
-        if guild is not None:
-            channel = guild.get_channel(channel_id)
-            if channel is not None:
+        if guild := self._get_guild(guild_id):
+            if channel := guild.get_channel(channel_id):
                 old_channel = copy.copy(channel)
                 channel._update(guild, data)
                 self.dispatch('guild_channel_update', old_channel, channel)
-            else:
-                _log.debug('CHANNEL_UPDATE referencing an unknown channel ID: %s. Discarding.', channel_id)
-        else:
-            _log.debug('CHANNEL_UPDATE referencing an unknown guild ID: %s. Discarding.', guild_id)
 
     def parse_channel_create(self, data) -> None:
         factory, ch_type = _channel_factory(data['type'])
@@ -964,20 +958,16 @@ class ConnectionState:
         self.dispatch('member_join', member)
 
     def parse_guild_member_remove(self, data) -> None:
-        guild = self._get_guild(int(data['guild_id']))
-        if guild is not None:
+        if guild := self._get_guild(int(data['guild_id'])):
             try:
                 guild._member_count -= 1
             except AttributeError:
                 pass
 
             user_id = int(data['user']['id'])
-            member = guild.get_member(user_id)
-            if member is not None:
+            if member := guild.get_member(user_id):
                 guild._remove_member(member)  # type: ignore
                 self.dispatch('member_remove', member)
-        else:
-            _log.debug('GUILD_MEMBER_REMOVE referencing an unknown guild ID: %s. Discarding.', data['guild_id'])
 
     def parse_guild_member_update(self, data) -> None:
         guild = self._get_guild(int(data['guild_id']))
@@ -1106,8 +1096,6 @@ class ConnectionState:
             old_guild = copy.copy(guild)
             guild._from_data(data)
             self.dispatch('guild_update', old_guild, guild)
-        else:
-            _log.debug('GUILD_UPDATE referencing an unknown guild ID: %s. Discarding.', data['id'])
 
     def parse_guild_delete(self, data) -> None:
         guild = self._get_guild(int(data['id']))
@@ -1174,8 +1162,6 @@ class ConnectionState:
                 return
             else:
                 self.dispatch('guild_role_delete', role)
-        else:
-            _log.debug('GUILD_ROLE_DELETE referencing an unknown guild ID: %s. Discarding.', data['guild_id'])
 
     def parse_guild_role_update(self, data) -> None:
         guild = self._get_guild(int(data['guild_id']))
@@ -1187,8 +1173,6 @@ class ConnectionState:
                 old_role = copy.copy(role)
                 role._update(role_data)
                 self.dispatch('guild_role_update', old_role, role)
-        else:
-            _log.debug('GUILD_ROLE_UPDATE referencing an unknown guild ID: %s. Discarding.', data['guild_id'])
 
     def parse_guild_members_chunk(self, data) -> None:
         guild_id = int(data['guild_id'])
@@ -1212,11 +1196,8 @@ class ConnectionState:
         self.process_chunk_requests(guild_id, data.get('nonce'), members, complete)
 
     def parse_guild_integrations_update(self, data) -> None:
-        guild = self._get_guild(int(data['guild_id']))
-        if guild is not None:
+        if guild := self._get_guild(int(data['guild_id'])):
             self.dispatch('guild_integrations_update', guild)
-        else:
-            _log.debug('GUILD_INTEGRATIONS_UPDATE referencing an unknown guild ID: %s. Discarding.', data['guild_id'])
 
     def parse_integration_create(self, data) -> None:
         guild_id = int(data.pop('guild_id'))
@@ -1225,8 +1206,6 @@ class ConnectionState:
             cls, _ = _integration_factory(data['type'])
             integration = cls(data=data, guild=guild)
             self.dispatch('integration_create', integration)
-        else:
-            _log.debug('INTEGRATION_CREATE referencing an unknown guild ID: %s. Discarding.', guild_id)
 
     def parse_integration_update(self, data) -> None:
         guild_id = int(data.pop('guild_id'))
@@ -1235,8 +1214,6 @@ class ConnectionState:
             cls, _ = _integration_factory(data['type'])
             integration = cls(data=data, guild=guild)
             self.dispatch('integration_update', integration)
-        else:
-            _log.debug('INTEGRATION_UPDATE referencing an unknown guild ID: %s. Discarding.', guild_id)
 
     def parse_integration_delete(self, data) -> None:
         guild_id = int(data['guild_id'])
@@ -1244,8 +1221,6 @@ class ConnectionState:
         if guild is not None:
             raw = RawIntegrationDeleteEvent(data)
             self.dispatch('raw_integration_delete', raw)
-        else:
-            _log.debug('INTEGRATION_DELETE referencing an unknown guild ID: %s. Discarding.', guild_id)
 
     def parse_webhooks_update(self, data) -> None:
         guild = self._get_guild(int(data['guild_id']))
@@ -1256,8 +1231,6 @@ class ConnectionState:
         channel = guild.get_channel(int(data['channel_id']))
         if channel is not None:
             self.dispatch('webhooks_update', channel)
-        else:
-            _log.debug('WEBHOOKS_UPDATE referencing an unknown channel ID: %s. Discarding.', data['channel_id'])
 
     def parse_stage_instance_create(self, data) -> None:
         guild = self._get_guild(int(data['guild_id']))
@@ -1265,8 +1238,6 @@ class ConnectionState:
             stage_instance = StageInstance(guild=guild, state=self, data=data)
             guild._stage_instances[stage_instance.id] = stage_instance
             self.dispatch('stage_instance_create', stage_instance)
-        else:
-            _log.debug('STAGE_INSTANCE_CREATE referencing unknown guild ID: %s. Discarding.', data['guild_id'])
 
     def parse_stage_instance_update(self, data) -> None:
         guild = self._get_guild(int(data['guild_id']))
@@ -1276,10 +1247,6 @@ class ConnectionState:
                 old_stage_instance = copy.copy(stage_instance)
                 stage_instance._update(data)
                 self.dispatch('stage_instance_update', old_stage_instance, stage_instance)
-            else:
-                _log.debug('STAGE_INSTANCE_UPDATE referencing unknown stage instance ID: %s. Discarding.', data['id'])
-        else:
-            _log.debug('STAGE_INSTANCE_UPDATE referencing unknown guild ID: %s. Discarding.', data['guild_id'])
 
     def parse_stage_instance_delete(self, data) -> None:
         guild = self._get_guild(int(data['guild_id']))
@@ -1290,8 +1257,6 @@ class ConnectionState:
                 pass
             else:
                 self.dispatch('stage_instance_delete', stage_instance)
-        else:
-            _log.debug('STAGE_INSTANCE_DELETE referencing unknown guild ID: %s. Discarding.', data['guild_id'])
 
     def parse_voice_state_update(self, data) -> None:
         guild = self._get_guild(utils._get_as_snowflake(data, 'guild_id'))
@@ -1317,8 +1282,6 @@ class ConnectionState:
                         guild._add_member(member)
 
                 self.dispatch('voice_state_update', member, before, after)
-            else:
-                _log.debug('VOICE_STATE_UPDATE referencing an unknown member ID: %s. Discarding.', data['user_id'])
 
     def parse_voice_server_update(self, data) -> None:
         try:
