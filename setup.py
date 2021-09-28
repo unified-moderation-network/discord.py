@@ -56,11 +56,6 @@ packages = [
 
 setup(name='discord.py',
       author='Rapptz',
-      url='https://github.com/Rapptz/discord.py',
-      project_urls={
-        "Documentation": "https://discordpy.readthedocs.io/en/latest/",
-        "Issue tracker": "https://github.com/Rapptz/discord.py/issues",
-      },
       version=version,
       packages=packages,
       license='MIT',
