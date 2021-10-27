@@ -35,7 +35,6 @@ import inspect
 
 import os
 
-from .ast_utils import nodebuglog
 from .guild import Guild
 from .activity import BaseActivity
 from .user import User, ClientUser
@@ -140,7 +139,6 @@ async def logging_coroutine(coroutine: Coroutine[Any, Any, T], *, info: str) -> 
         _log.exception('Exception occurred during %s', info)
 
 
-@nodebuglog("_log")
 class ConnectionState:
     if TYPE_CHECKING:
         _get_websocket: Callable[..., DiscordWebSocket]
@@ -714,14 +712,16 @@ class ConnectionState:
         # guild_id won't be None here
         guild = self._get_guild(guild_id)
         if guild is None:
-            _log.debug('PRESENCE_UPDATE referencing an unknown guild ID: %s. Discarding.', guild_id)
+            if __debug__:
+                _log.debug('PRESENCE_UPDATE referencing an unknown guild ID: %s. Discarding.', guild_id)
             return
 
         user = data['user']
         member_id = int(user['id'])
         member = guild.get_member(member_id)
         if member is None:
-            _log.debug('PRESENCE_UPDATE referencing an unknown member ID: %s. Discarding', member_id)
+            if __debug__:
+                _log.debug('PRESENCE_UPDATE referencing an unknown member ID: %s. Discarding', member_id)
             return
 
         old_member = Member._copy(member)
@@ -777,7 +777,8 @@ class ConnectionState:
     def parse_channel_create(self, data) -> None:
         factory, ch_type = _channel_factory(data['type'])
         if factory is None:
-            _log.debug('CHANNEL_CREATE referencing an unknown channel type %s. Discarding.', data['type'])
+            if __debug__:
+                _log.debug('CHANNEL_CREATE referencing an unknown channel type %s. Discarding.', data['type'])
             return
 
         guild_id = utils._get_as_snowflake(data, 'guild_id')
@@ -788,7 +789,8 @@ class ConnectionState:
             guild._add_channel(channel)  # type: ignore
             self.dispatch('guild_channel_create', channel)
         else:
-            _log.debug('CHANNEL_CREATE referencing an unknown guild ID: %s. Discarding.', guild_id)
+            if __debug__:
+                _log.debug('CHANNEL_CREATE referencing an unknown guild ID: %s. Discarding.', guild_id)
             return
 
     def parse_channel_pins_update(self, data) -> None:
@@ -802,7 +804,8 @@ class ConnectionState:
             channel = guild and guild._resolve_channel(channel_id)
 
         if channel is None:
-            _log.debug('CHANNEL_PINS_UPDATE referencing an unknown channel ID: %s. Discarding.', channel_id)
+            if __debug__:
+                _log.debug('CHANNEL_PINS_UPDATE referencing an unknown channel ID: %s. Discarding.', channel_id)
             return
 
         last_pin = utils.parse_time(data['last_pin_timestamp']) if data['last_pin_timestamp'] else None
@@ -816,7 +819,8 @@ class ConnectionState:
         guild_id = int(data['guild_id'])
         guild: Optional[Guild] = self._get_guild(guild_id)
         if guild is None:
-            _log.debug('THREAD_CREATE referencing an unknown guild ID: %s. Discarding', guild_id)
+            if __debug__:
+                _log.debug('THREAD_CREATE referencing an unknown guild ID: %s. Discarding', guild_id)
             return
 
         thread = Thread(guild=guild, state=guild._state, data=data)
@@ -829,7 +833,8 @@ class ConnectionState:
         guild_id = int(data['guild_id'])
         guild = self._get_guild(guild_id)
         if guild is None:
-            _log.debug('THREAD_UPDATE referencing an unknown guild ID: %s. Discarding', guild_id)
+            if __debug__:
+                _log.debug('THREAD_UPDATE referencing an unknown guild ID: %s. Discarding', guild_id)
             return
 
         thread_id = int(data['id'])
@@ -847,7 +852,8 @@ class ConnectionState:
         guild_id = int(data['guild_id'])
         guild = self._get_guild(guild_id)
         if guild is None:
-            _log.debug('THREAD_DELETE referencing an unknown guild ID: %s. Discarding', guild_id)
+            if __debug__:
+                _log.debug('THREAD_DELETE referencing an unknown guild ID: %s. Discarding', guild_id)
             return
 
         thread_id = int(data['id'])
@@ -860,7 +866,8 @@ class ConnectionState:
         guild_id = int(data['guild_id'])
         guild: Optional[Guild] = self._get_guild(guild_id)
         if guild is None:
-            _log.debug('THREAD_LIST_SYNC referencing an unknown guild ID: %s. Discarding', guild_id)
+            if __debug__:
+                _log.debug('THREAD_LIST_SYNC referencing an unknown guild ID: %s. Discarding', guild_id)
             return
 
         try:
@@ -896,13 +903,15 @@ class ConnectionState:
         guild_id = int(data['guild_id'])
         guild: Optional[Guild] = self._get_guild(guild_id)
         if guild is None:
-            _log.debug('THREAD_MEMBER_UPDATE referencing an unknown guild ID: %s. Discarding', guild_id)
+            if __debug__:
+                _log.debug('THREAD_MEMBER_UPDATE referencing an unknown guild ID: %s. Discarding', guild_id)
             return
 
         thread_id = int(data['id'])
         thread: Optional[Thread] = guild.get_thread(thread_id)
         if thread is None:
-            _log.debug('THREAD_MEMBER_UPDATE referencing an unknown thread ID: %s. Discarding', thread_id)
+            if __debug__:
+                _log.debug('THREAD_MEMBER_UPDATE referencing an unknown thread ID: %s. Discarding', thread_id)
             return
 
         member = ThreadMember(thread, data)
@@ -912,13 +921,15 @@ class ConnectionState:
         guild_id = int(data['guild_id'])
         guild: Optional[Guild] = self._get_guild(guild_id)
         if guild is None:
-            _log.debug('THREAD_MEMBERS_UPDATE referencing an unknown guild ID: %s. Discarding', guild_id)
+            if __debug__:
+                _log.debug('THREAD_MEMBERS_UPDATE referencing an unknown guild ID: %s. Discarding', guild_id)
             return
 
         thread_id = int(data['id'])
         thread: Optional[Thread] = guild.get_thread(thread_id)
         if thread is None:
-            _log.debug('THREAD_MEMBERS_UPDATE referencing an unknown thread ID: %s. Discarding', thread_id)
+            if __debug__:
+                _log.debug('THREAD_MEMBERS_UPDATE referencing an unknown thread ID: %s. Discarding', thread_id)
             return
 
         added_members = [ThreadMember(thread, d) for d in data.get('added_members', [])]
@@ -943,7 +954,8 @@ class ConnectionState:
     def parse_guild_member_add(self, data) -> None:
         guild = self._get_guild(int(data['guild_id']))
         if guild is None:
-            _log.debug('GUILD_MEMBER_ADD referencing an unknown guild ID: %s. Discarding.', data['guild_id'])
+            if __debug__:
+                _log.debug('GUILD_MEMBER_ADD referencing an unknown guild ID: %s. Discarding.', data['guild_id'])
             return
 
         member = Member(guild=guild, data=data, state=self)
@@ -974,7 +986,8 @@ class ConnectionState:
         user = data['user']
         user_id = int(user['id'])
         if guild is None:
-            _log.debug('GUILD_MEMBER_UPDATE referencing an unknown guild ID: %s. Discarding.', data['guild_id'])
+            if __debug__:
+                _log.debug('GUILD_MEMBER_UPDATE referencing an unknown guild ID: %s. Discarding.', data['guild_id'])
             return
 
         member = guild.get_member(user_id)
@@ -996,7 +1009,8 @@ class ConnectionState:
                     self.dispatch('user_update', user_update[0], user_update[1])
 
                 guild._add_member(member)
-            _log.debug('GUILD_MEMBER_UPDATE referencing an unknown member ID: %s. Discarding.', user_id)
+            if __debug__:
+                _log.debug('GUILD_MEMBER_UPDATE referencing an unknown member ID: %s. Discarding.', user_id)
 
     def parse_guild_emojis_update(self, data) -> None:
         guild = self._get_guild(int(data['guild_id']))
@@ -1014,7 +1028,8 @@ class ConnectionState:
     def parse_guild_stickers_update(self, data) -> None:
         guild = self._get_guild(int(data['guild_id']))
         if guild is None:
-            _log.debug('GUILD_STICKERS_UPDATE referencing an unknown guild ID: %s. Discarding.', data['guild_id'])
+            if __debug__:
+                _log.debug('GUILD_STICKERS_UPDATE referencing an unknown guild ID: %s. Discarding.', data['guild_id'])
             return
 
         before_stickers = guild.stickers
@@ -1100,7 +1115,8 @@ class ConnectionState:
     def parse_guild_delete(self, data) -> None:
         guild = self._get_guild(int(data['id']))
         if guild is None:
-            _log.debug('GUILD_DELETE referencing an unknown guild ID: %s. Discarding.', data['id'])
+            if __debug__:
+                _log.debug('GUILD_DELETE referencing an unknown guild ID: %s. Discarding.', data['id'])
             return
 
         if data.get('unavailable', False):
@@ -1144,7 +1160,8 @@ class ConnectionState:
     def parse_guild_role_create(self, data) -> None:
         guild = self._get_guild(int(data['guild_id']))
         if guild is None:
-            _log.debug('GUILD_ROLE_CREATE referencing an unknown guild ID: %s. Discarding.', data['guild_id'])
+            if __debug__:
+                _log.debug('GUILD_ROLE_CREATE referencing an unknown guild ID: %s. Discarding.', data['guild_id'])
             return
 
         role_data = data['role']
@@ -1181,7 +1198,8 @@ class ConnectionState:
 
         # the guild won't be None here
         members = [Member(guild=guild, data=member, state=self) for member in data.get('members', [])]  # type: ignore
-        _log.debug('Processed a chunk for %s members in guild ID %s.', len(members), guild_id)
+        if __debug__:
+            _log.debug('Processed a chunk for %s members in guild ID %s.', len(members), guild_id)
 
         if presences:
             member_dict = {str(member.id): member for member in members}
@@ -1225,7 +1243,8 @@ class ConnectionState:
     def parse_webhooks_update(self, data) -> None:
         guild = self._get_guild(int(data['guild_id']))
         if guild is None:
-            _log.debug('WEBHOOKS_UPDATE referencing an unknown guild ID: %s. Discarding', data['guild_id'])
+            if __debug__:
+                _log.debug('WEBHOOKS_UPDATE referencing an unknown guild ID: %s. Discarding', data['guild_id'])
             return
 
         channel = guild.get_channel(int(data['channel_id']))
@@ -1362,7 +1381,6 @@ class ConnectionState:
         return Message(state=self, channel=channel, data=data)
 
 
-@nodebuglog("_log")
 class AutoShardedConnectionState(ConnectionState):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -1409,7 +1427,8 @@ class AutoShardedConnectionState(ConnectionState):
                 break
             else:
                 if self._guild_needs_chunking(guild):
-                    _log.debug('Guild ID %d requires chunking, will be done in the background.', guild.id)
+                    if __debug__:
+                        _log.debug('Guild ID %d requires chunking, will be done in the background.', guild.id)
                     if len(current_bucket) >= max_concurrency:
                         try:
                             await utils.sane_wait_for(current_bucket, timeout=max_concurrency * 70.0)

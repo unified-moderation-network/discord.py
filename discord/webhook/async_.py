@@ -44,7 +44,6 @@ from ..asset import Asset
 from ..http import Route
 from ..mixins import Hashable
 from ..channel import PartialMessageable
-from ..ast_utils import nodebuglog
 
 __all__ = (
     'Webhook',
@@ -94,7 +93,6 @@ class AsyncDeferredLock:
         self.lock.release()
 
 
-@nodebuglog("_log")
 class AsyncWebhookAdapter:
     def __init__(self):
         self._locks: Dict[Any, asyncio.Lock] = {}
@@ -150,13 +148,14 @@ class AsyncWebhookAdapter:
 
                 try:
                     async with session.request(method, url, data=to_send, headers=headers, params=params) as response:
-                        _log.debug(
-                            'Webhook ID %s with %s %s has returned status code %s',
-                            webhook_id,
-                            method,
-                            url,
-                            response.status,
-                        )
+                        if __debug__:
+                            _log.debug(
+                                'Webhook ID %s with %s %s has returned status code %s',
+                                webhook_id,
+                                method,
+                                url,
+                                response.status,
+                            )
                         data = (await response.text(encoding='utf-8')) or None
                         if data and response.headers['Content-Type'] == 'application/json':
                             data = json.loads(data)
@@ -164,9 +163,10 @@ class AsyncWebhookAdapter:
                         remaining = response.headers.get('X-Ratelimit-Remaining')
                         if remaining == '0' and response.status != 429:
                             delta = utils._parse_ratelimit_header(response)
-                            _log.debug(
-                                'Webhook ID %s has been pre-emptively rate limited, waiting %.2f seconds', webhook_id, delta
-                            )
+                            if __debug__:
+                                _log.debug(
+                                    'Webhook ID %s has been pre-emptively rate limited, waiting %.2f seconds', webhook_id, delta
+                                )
                             lock.delay_by(delta)
 
                         if 300 > response.status >= 200:

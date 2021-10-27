@@ -33,7 +33,6 @@ from typing import Any, Callable, Coroutine, Dict, Generator, List, Optional, Se
 
 import aiohttp
 
-from .ast_utils import nodebuglog
 from .user import User, ClientUser
 from .invite import Invite
 from .template import Template
@@ -110,7 +109,6 @@ def _cleanup_loop(loop: asyncio.AbstractEventLoop) -> None:
         _log.info('Closing the event loop.')
         loop.close()
 
-@nodebuglog("_log")
 class Client:
     r"""Represents a client connection that connects to Discord.
     This class is used to interact with the Discord WebSocket and API.
@@ -365,7 +363,8 @@ class Client:
         return asyncio.create_task(wrapped, name=f'discord.py: {event_name}')
 
     def dispatch(self, event: str, *args: Any, **kwargs: Any) -> None:
-        _log.debug('Dispatching event %s', event)
+        if __debug__:
+            _log.debug('Dispatching event %s', event)
         method = 'on_' + event
 
         listeners = self._listeners.get(event)
@@ -1043,7 +1042,8 @@ class Client:
             raise TypeError('event registered must be a coroutine function')
 
         setattr(self, coro.__name__, coro)
-        _log.debug('%s has successfully been registered as an event', coro.__name__)
+        if __debug__:
+            _log.debug('%s has successfully been registered as an event', coro.__name__)
         return coro
 
     async def change_presence(

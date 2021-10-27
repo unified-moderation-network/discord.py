@@ -37,7 +37,6 @@ import aiohttp
 
 from . import utils
 from .activity import BaseActivity
-from .ast_utils import nodebuglog
 from .enums import SpeakingState
 from .errors import ConnectionClosed, InvalidArgument
 
@@ -106,7 +105,6 @@ class GatewayRatelimiter:
                 await asyncio.sleep(delta)
 
 
-@nodebuglog("_log")
 class KeepAliveHandler(threading.Thread):
     def __init__(self, *args, **kwargs):
         ws = kwargs.pop('ws', None)
@@ -144,7 +142,8 @@ class KeepAliveHandler(threading.Thread):
                     return
 
             data = self.get_payload()
-            _log.debug(self.msg, self.shard_id, data['d'])
+            if __debug__:
+                _log.debug(self.msg, self.shard_id, data['d'])
             coro = self.ws.send_heartbeat(data)
             f = asyncio.run_coroutine_threadsafe(coro, loop=self.ws.loop)
             try:
@@ -214,7 +213,6 @@ class DiscordClientWebSocketResponse(aiohttp.ClientWebSocketResponse):
     async def close(self, *, code: int = 4000, message: bytes = b'') -> bool:
         return await super().close(code=code, message=message)
 
-@nodebuglog("_log")
 class DiscordWebSocket:
     """Implements a WebSocket for Discord's gateway v6.
 
@@ -333,7 +331,8 @@ class DiscordWebSocket:
 
         client._connection._update_references(ws)
 
-        _log.debug('Created websocket connected to %s', gateway)
+        if __debug__:
+            _log.debug('Created websocket connected to %s', gateway)
 
         # poll event for OP Hello
         await ws.poll_event()
@@ -435,7 +434,8 @@ class DiscordWebSocket:
         self.log_receive(msg)
         msg = utils._from_json(msg)
 
-        _log.debug('For Shard ID %s: WebSocket Event: %s', self.shard_id, msg)
+        if __debug__:
+            _log.debug('For Shard ID %s: WebSocket Event: %s', self.shard_id, msg)
         event = msg.get('t')
         if event:
             self._dispatch('socket_event_type', event)
@@ -454,7 +454,8 @@ class DiscordWebSocket:
                 # "reconnect" can only be handled by the Client
                 # so we terminate our connection and raise an
                 # internal exception signalling to reconnect.
-                _log.debug('Received RECONNECT opcode.')
+                if __debug__:
+                    _log.debug('Received RECONNECT opcode.')
                 await self.close()
                 raise ReconnectWebSocket(self.shard_id)
 
@@ -510,8 +511,8 @@ class DiscordWebSocket:
         try:
             func = self._discord_parsers[event]
         except KeyError:
-            pass  # I may modify the AST rewriting deco to not need this later, but it's an odd case to *only* log.
-            _log.debug('Unknown event %s.', event)
+            if __debug__:
+                _log.debug('Unknown event %s.', event)
         else:
             func(data)
 
@@ -565,10 +566,12 @@ class DiscordWebSocket:
             elif msg.type is aiohttp.WSMsgType.BINARY:
                 await self.received_message(msg.data)
             elif msg.type is aiohttp.WSMsgType.ERROR:
-                _log.debug('Received %s', msg)
+                if __debug__:
+                    _log.debug('Received %s', msg)
                 raise msg.data
             elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.CLOSING, aiohttp.WSMsgType.CLOSE):
-                _log.debug('Received %s', msg)
+                if __debug__:
+                    _log.debug('Received %s', msg)
                 raise WebSocketClosure
         except (asyncio.TimeoutError, WebSocketClosure) as e:
             # Ensure the keep alive handler is closed
@@ -634,7 +637,8 @@ class DiscordWebSocket:
         }
 
         sent = utils._to_json(payload)
-        _log.debug('Sending "%s" to change status', sent)
+        if __debug__:
+            _log.debug('Sending "%s" to change status', sent)
         await self.send(sent)
 
     async def request_chunks(self, guild_id, query=None, *, limit, user_ids=None, presences=False, nonce=None):
@@ -669,8 +673,8 @@ class DiscordWebSocket:
                 'self_deaf': self_deaf
             }
         }
-
-        _log.debug('Updating our voice state to %s.', payload)
+        if __debug__:
+            _log.debug('Updating our voice state to %s.', payload)
         await self.send_as_json(payload)
 
     async def close(self, code=4000):
@@ -738,7 +742,8 @@ class DiscordVoiceWebSocket:
         pass
 
     async def send_as_json(self, data):
-        _log.debug('Sending voice websocket frame: %s.', data)
+        if __debug__:
+            _log.debug('Sending voice websocket frame: %s.', data)
         await self.ws.send_str(utils._to_json(data))
 
     send_heartbeat = send_as_json
@@ -824,7 +829,8 @@ class DiscordVoiceWebSocket:
         await self.send_as_json(payload)
 
     async def received_message(self, msg):
-        _log.debug('Voice websocket frame received: %s', msg)
+        if __debug__:
+            _log.debug('Voice websocket frame received: %s', msg)
         op = msg['op']
         data = msg.get('d')
 
@@ -856,7 +862,8 @@ class DiscordVoiceWebSocket:
         struct.pack_into('>I', packet, 4, state.ssrc)
         state.socket.sendto(packet, (state.endpoint_ip, state.voice_port))
         recv = await self.loop.sock_recv(state.socket, 70)
-        _log.debug('received packet in initial_connection: %s', recv)
+        if __debug__:
+            _log.debug('received packet in initial_connection: %s', recv)
 
         # the ip is ascii starting at the 4th byte and ending at the first null
         ip_start = 4
@@ -864,11 +871,13 @@ class DiscordVoiceWebSocket:
         state.ip = recv[ip_start:ip_end].decode('ascii')
 
         state.port = struct.unpack_from('>H', recv, len(recv) - 2)[0]
-        _log.debug('detected ip: %s port: %s', state.ip, state.port)
+        if __debug__:
+            _log.debug('detected ip: %s port: %s', state.ip, state.port)
 
         # there *should* always be at least one supported mode (xsalsa20_poly1305)
         modes = [mode for mode in data['modes'] if mode in self._connection.supported_modes]
-        _log.debug('received supported encryption modes: %s', ", ".join(modes))
+        if __debug__:
+            _log.debug('received supported encryption modes: %s', ", ".join(modes))
 
         mode = modes[0]
         await self.select_protocol(state.ip, state.port, mode)
@@ -901,10 +910,12 @@ class DiscordVoiceWebSocket:
         if msg.type is aiohttp.WSMsgType.TEXT:
             await self.received_message(utils._from_json(msg.data))
         elif msg.type is aiohttp.WSMsgType.ERROR:
-            _log.debug('Received %s', msg)
+            if __debug__:
+                _log.debug('Received %s', msg)
             raise ConnectionClosed(self.ws, shard_id=None) from msg.data
         elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.CLOSE, aiohttp.WSMsgType.CLOSING):
-            _log.debug('Received %s', msg)
+            if __debug__:
+                _log.debug('Received %s', msg)
             raise ConnectionClosed(self.ws, shard_id=None, code=self._close_code)
 
     async def close(self, code=1000):

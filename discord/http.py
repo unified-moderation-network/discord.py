@@ -48,7 +48,6 @@ import weakref
 
 import aiohttp
 
-from .ast_utils import nodebuglog
 from .errors import HTTPException, Forbidden, NotFound, LoginFailure, DiscordServerError, GatewayNotFound, InvalidArgument
 from .gateway import DiscordClientWebSocketResponse
 from . import __version__, utils
@@ -157,7 +156,6 @@ class MaybeUnlock:
 aiohttp.hdrs.WEBSOCKET = 'websocket'  # type: ignore
 
 
-@nodebuglog("_log")
 class HTTPClient:
     """Represents an HTTP client sending HTTP requests to the Discord API."""
 
@@ -273,7 +271,8 @@ class HTTPClient:
 
                 try:
                     async with self.__session.request(method, url, **kwargs) as response:
-                        _log.debug('%s %s with %s has returned %s', method, url, kwargs.get('data'), response.status)
+                        if __debug__:
+                            _log.debug('%s %s with %s has returned %s', method, url, kwargs.get('data'), response.status)
 
                         # even errors have text involved in them so this is safe to call
                         data = await json_or_text(response)
@@ -283,13 +282,15 @@ class HTTPClient:
                         if remaining == '0' and response.status != 429:
                             # we've depleted our current bucket
                             delta = utils._parse_ratelimit_header(response, use_clock=self.use_clock)
-                            _log.debug('A rate limit bucket has been exhausted (bucket: %s, retry: %s).', bucket, delta)
+                            if __debug__:
+                                _log.debug('A rate limit bucket has been exhausted (bucket: %s, retry: %s).', bucket, delta)
                             maybe_lock.defer()
                             self.loop.call_later(delta, lock.release)
 
                         # the request was successful so just return the text/json
                         if 300 > response.status >= 200:
-                            _log.debug('%s %s has received %s', method, url, data)
+                            if __debug__:
+                                _log.debug('%s %s has received %s', method, url, data)
                             return data
 
                         # we are being rate limited
@@ -311,13 +312,15 @@ class HTTPClient:
                                 self._global_over.clear()
 
                             await asyncio.sleep(retry_after)
-                            _log.debug('Done sleeping for the rate limit. Retrying...')
+                            if __debug__:
+                                _log.debug('Done sleeping for the rate limit. Retrying...')
 
                             # release the global lock now that the
                             # global rate limit has passed
                             if is_global:
                                 self._global_over.set()
-                                _log.debug('Global rate limit is now over.')
+                                if __debug__:
+                                    _log.debug('Global rate limit is now over.')
 
                             continue
 
