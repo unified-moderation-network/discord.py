@@ -251,6 +251,10 @@ class Member(discord.abc.Messageable, _UserTag):
     premium_since: Optional[:class:`datetime.datetime`]
         An aware datetime object that specifies the date and time in UTC when the member used their
         "Nitro boost" on the guild, if available. This could be ``None``.
+
+    communication_disabled_until: Optional[:class:`datetime.datetime`]
+        An aware datetime object that specifies the date and time in UTC when the member may communicate again.
+        This may be ``None`` or a time in the past if the user can communicate currently.
     """
 
     __slots__ = (
@@ -265,6 +269,7 @@ class Member(discord.abc.Messageable, _UserTag):
         '_user',
         '_state',
         '_avatar',
+        'communication_disabled_until',
     )
 
     if TYPE_CHECKING:
@@ -296,6 +301,7 @@ class Member(discord.abc.Messageable, _UserTag):
         self.nick: Optional[str] = data.get('nick', None)
         self.pending: bool = data.get('pending', False)
         self._avatar: Optional[str] = data.get('avatar')
+        self.communication_disabled_until: Optional[datetime.datetime] = utils.parse_time(data.get('communication_disabled_until'))
 
     def __str__(self) -> str:
         return str(self._user)
@@ -346,6 +352,7 @@ class Member(discord.abc.Messageable, _UserTag):
         self._roles = utils.SnowflakeList(member._roles, is_sorted=True)
         self.joined_at = member.joined_at
         self.premium_since = member.premium_since
+        self.communication_disabled_until = member.communication_disabled_until
         self._client_status = member._client_status.copy()
         self.guild = member.guild
         self.nick = member.nick
@@ -376,6 +383,7 @@ class Member(discord.abc.Messageable, _UserTag):
         except KeyError:
             pass
 
+        self.communication_disabled_until = utils.parse_time(data.get('communication_disabled_until'))
         self.premium_since = utils.parse_time(data.get('premium_since'))
         self._roles = utils.SnowflakeList(map(int, data['roles']))
         self._avatar = data.get('avatar')
@@ -643,6 +651,7 @@ class Member(discord.abc.Messageable, _UserTag):
         roles: List[discord.abc.Snowflake] = MISSING,
         voice_channel: Optional[VocalGuildChannel] = MISSING,
         reason: Optional[str] = None,
+        communication_disabled_until: Optional[datetime.datetime] = MISSING,
     ) -> Optional[Member]:
         """|coro|
 
@@ -692,6 +701,9 @@ class Member(discord.abc.Messageable, _UserTag):
             Pass ``None`` to kick them from voice.
         reason: Optional[:class:`str`]
             The reason for editing this member. Shows up on the audit log.
+        
+        communication_disabled_until: Optional[:class:`datetime.datetime`]
+            When the member is prevented from communicating until. Use ``None`` to remove the restriction.
 
         Raises
         -------
@@ -710,6 +722,15 @@ class Member(discord.abc.Messageable, _UserTag):
         guild_id = self.guild.id
         me = self._state.self_id == self.id
         payload: Dict[str, Any] = {}
+
+        if communication_disabled_until is not MISSING:
+            if communication_disabled_until is None:
+                payload['communication_disabled_until'] = None
+            else:
+                if communication_disabled_until.tzinfo:
+                    payload['communication_disabled_until'] = communication_disabled_until.astimezone(tz=datetime.timezone.utc).isoformat()
+                else:
+                    payload['communication_disabled_until'] = communication_disabled_until.replace(tzinfo=datetime.timezone.utc).isoformat()
 
         if nick is not MISSING:
             nick = nick or ''
