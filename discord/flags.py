@@ -216,6 +216,12 @@ class SystemChannelFlags(BaseFlags):
         """
         return 4
 
+    @flag_value
+    def join_notification_replies(self):
+        """:class:`bool` Returns ``True`` if the join notifcations have sticker prompts"""
+        # This might need modifying to not invert everything
+        return 8
+
 
 @fill_with_flags()
 class MessageFlags(BaseFlags):
