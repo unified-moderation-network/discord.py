@@ -24,6 +24,8 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
+from functools import reduce
+import operator
 from typing import Callable, Any, ClassVar, Dict, Iterator, Set, TYPE_CHECKING, Tuple, Type, TypeVar, Optional
 from .flags import BaseFlags, flag_value, fill_with_flags, alias_flag_value
 
@@ -144,106 +146,11 @@ class Permissions(BaseFlags):
 
     @classmethod
     def all(cls: Type[P]) -> P:
-        """A factory method that creates a :class:`Permissions` with all
+        """A factory method that creates a :class:`Permissions` with all known
         permissions set to ``True``.
         """
-        return cls(0b111111111111111111111111111111111111111)
-
-    @classmethod
-    def all_channel(cls: Type[P]) -> P:
-        """A :class:`Permissions` with all channel-specific permissions set to
-        ``True`` and the guild-specific ones set to ``False``. The guild-specific
-        permissions are currently:
-
-        - :attr:`manage_emojis`
-        - :attr:`view_audit_log`
-        - :attr:`view_guild_insights`
-        - :attr:`manage_guild`
-        - :attr:`change_nickname`
-        - :attr:`manage_nicknames`
-        - :attr:`kick_members`
-        - :attr:`ban_members`
-        - :attr:`administrator`
-
-        .. versionchanged:: 1.7
-           Added :attr:`stream`, :attr:`priority_speaker` and :attr:`use_slash_commands` permissions.
-
-        .. versionchanged:: 2.0
-           Added :attr:`create_public_threads`, :attr:`create_private_threads`, :attr:`manage_threads`,
-           :attr:`use_external_stickers`, :attr:`send_messages_in_threads` and
-           :attr:`request_to_speak` permissions.
-        """
-        return cls(0b111110110110011111101111111111101010001)
-
-    @classmethod
-    def general(cls: Type[P]) -> P:
-        """A factory method that creates a :class:`Permissions` with all
-        "General" permissions from the official Discord UI set to ``True``.
-
-        .. versionchanged:: 1.7
-           Permission :attr:`read_messages` is now included in the general permissions, but
-           permissions :attr:`administrator`, :attr:`create_instant_invite`, :attr:`kick_members`,
-           :attr:`ban_members`, :attr:`change_nickname` and :attr:`manage_nicknames` are
-           no longer part of the general permissions.
-        """
-        return cls(0b01110000000010000000010010110000)
-
-    @classmethod
-    def membership(cls: Type[P]) -> P:
-        """A factory method that creates a :class:`Permissions` with all
-        "Membership" permissions from the official Discord UI set to ``True``.
-
-        .. versionadded:: 1.7
-        """
-        return cls(0b00001100000000000000000000000111)
-
-    @classmethod
-    def text(cls: Type[P]) -> P:
-        """A factory method that creates a :class:`Permissions` with all
-        "Text" permissions from the official Discord UI set to ``True``.
-
-        .. versionchanged:: 1.7
-           Permission :attr:`read_messages` is no longer part of the text permissions.
-           Added :attr:`use_slash_commands` permission.
-
-        .. versionchanged:: 2.0
-           Added :attr:`create_public_threads`, :attr:`create_private_threads`, :attr:`manage_threads`,
-           :attr:`send_messages_in_threads` and :attr:`use_external_stickers` permissions.
-        """
-        return cls(0b111110010000000000001111111100001000000)
-
-    @classmethod
-    def voice(cls: Type[P]) -> P:
-        """A factory method that creates a :class:`Permissions` with all
-        "Voice" permissions from the official Discord UI set to ``True``."""
-        return cls(0b00000011111100000000001100000000)
-
-    @classmethod
-    def stage(cls: Type[P]) -> P:
-        """A factory method that creates a :class:`Permissions` with all
-        "Stage Channel" permissions from the official Discord UI set to ``True``.
-
-        .. versionadded:: 1.7
-        """
-        return cls(1 << 32)
-
-    @classmethod
-    def stage_moderator(cls: Type[P]) -> P:
-        """A factory method that creates a :class:`Permissions` with all
-        "Stage Moderator" permissions from the official Discord UI set to ``True``.
-
-        .. versionadded:: 1.7
-        """
-        return cls(0b100000001010000000000000000000000)
-
-    @classmethod
-    def advanced(cls: Type[P]) -> P:
-        """A factory method that creates a :class:`Permissions` with all
-        "Advanced" permissions from the official Discord UI set to ``True``.
-
-        .. versionadded:: 1.7
-        """
-        return cls(1 << 3)
+        value = reduce(operator.or_, cls.VALID_FLAGS.values(), 0)
+        return cls(value)
 
     def update(self, **kwargs: bool) -> None:
         r"""Bulk updates this permission object.
@@ -551,6 +458,23 @@ class Permissions(BaseFlags):
         """
         return 1 << 38
 
+    @flag_value
+    def start_embedded_activities(self) -> int:
+        """:class:`bool`: Returns ``True`` if a user can start activities in a voice channel.
+        .. versionadded:: 2.0
+        """
+        return 1 << 39
+
+    @flag_value
+    def moderate_members(self) -> int:
+        """:class:`bool`: Returns ``True`` if a user can moderate members
+
+        Last updated 2022-02-24: this currently only means using timeout on members.
+        .. versionadded:: 2.0
+        """
+        return 1 << 40
+
+
 PO = TypeVar('PO', bound='PermissionOverwrite')
 
 def _augment_from_permissions(cls):
@@ -664,6 +588,9 @@ class PermissionOverwrite:
         send_messages_in_threads: Optional[bool]
         external_stickers: Optional[bool]
         use_external_stickers: Optional[bool]
+        start_embedded_activities: Optional[bool]
+        moderate_members: Optional[bool]
+
 
     def __init__(self, **kwargs: Optional[bool]):
         self._values: Dict[str, Optional[bool]] = {}
