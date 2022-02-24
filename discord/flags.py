@@ -23,6 +23,8 @@ DEALINGS IN THE SOFTWARE.
 """
 
 from __future__ import annotations
+import operator
+from functools import reduce
 
 from typing import Any, Callable, ClassVar, Dict, Generic, Iterator, List, Optional, Tuple, Type, TypeVar, overload
 
@@ -473,11 +475,9 @@ class Intents(BaseFlags):
     @classmethod
     def all(cls: Type[Intents]) -> Intents:
         """A factory method that creates a :class:`Intents` with everything enabled."""
-        bits = max(cls.VALID_FLAGS.values()).bit_length()
-        value = (1 << bits) - 1
-        self = cls.__new__(cls)
-        self.value = value
-        return self
+        s = cls()
+        s.value = reduce(operator.or_, cls.VALID_FLAGS.values(), 0)
+        return s
 
     @classmethod
     def none(cls: Type[Intents]) -> Intents:
@@ -872,6 +872,18 @@ class Intents(BaseFlags):
         """
         return 1 << 14
 
+    @flag_value
+    def message_content(self):
+        """:class:`bool`: TODO
+        """
+        return 1 << 15
+
+    @flag_value
+    def scheduled_events(self):
+        """:class:`bool`: TODO
+        """
+        return 1 << 16
+
 
 @fill_with_flags()
 class MemberCacheFlags(BaseFlags):
@@ -1072,3 +1084,15 @@ class ApplicationFlags(BaseFlags):
     def embedded(self):
         """:class:`bool`: Returns ``True`` if the application is embedded within the Discord client."""
         return 1 << 17
+
+    @flag_value
+    def gateway_message_content(self):
+        """:class:`bool`: TODO
+        """
+        return 1 << 18
+
+    @flag_value
+    def gateway_message_content_limited(self):
+        """:class:`bool`: TODO
+        """
+        return 1 << 19
